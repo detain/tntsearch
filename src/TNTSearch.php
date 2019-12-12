@@ -226,6 +226,7 @@ class TNTSearch
             $docs = new Collection;
         }
 
+	$totalHits = $docs->count();
         $docs = $docs->take($numOfResults);
 
         $stopTimer = microtime(true);
@@ -236,7 +237,7 @@ class TNTSearch
 
         return [
             'ids'            => $docs->toArray(),
-            'hits'           => $docs->count(),
+            'hits'           => $totalHits,
             'execution_time' => round($stopTimer - $startTimer, 7) * 1000 ." ms"
         ];
     }
