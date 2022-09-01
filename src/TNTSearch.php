@@ -5,7 +5,7 @@ namespace TeamTNT\TNTSearch;
 use PDO;
 use TeamTNT\TNTSearch\Exceptions\IndexNotFoundException;
 use TeamTNT\TNTSearch\Indexer\TNTIndexer;
-use TeamTNT\TNTSearch\Stemmer\PorterStemmer;
+use TeamTNT\TNTSearch\Stemmer\NoStemmer;
 use TeamTNT\TNTSearch\Support\Collection;
 use TeamTNT\TNTSearch\Support\Expression;
 use TeamTNT\TNTSearch\Support\Highlighter;
@@ -151,6 +151,7 @@ class TNTSearch
         return [
             'ids'            => array_keys($docs->toArray()),
             'hits'           => $totalHits,
+            'docScores'      => $docScores,
             'execution_time' => round($stopTimer - $startTimer, 7) * 1000 ." ms"
         ];
     }
@@ -364,7 +365,7 @@ class TNTSearch
      */
     public function fuzzySearch($keyword)
     {
-        $prefix         = substr($keyword, 0, $this->fuzzy_prefix_length);
+        $prefix         = mb_substr($keyword, 0, $this->fuzzy_prefix_length);
         $searchWordlist = "SELECT * FROM wordlist WHERE term like :keyword ORDER BY num_hits DESC LIMIT {$this->fuzzy_max_expansions}";
         $stmtWord       = $this->index->prepare($searchWordlist);
         $stmtWord->bindValue(':keyword', mb_strtolower($prefix)."%");
@@ -408,7 +409,7 @@ class TNTSearch
         if ($stemmer) {
             $this->stemmer = new $stemmer;
         } else {
-            $this->stemmer = isset($this->config['stemmer']) ? new $this->config['stemmer'] : new PorterStemmer;
+            $this->stemmer = isset($this->config['stemmer']) ? new $this->config['stemmer'] : new NoStemmer;
         }
     }
 
@@ -473,13 +474,13 @@ class TNTSearch
      */
     public function highlight($text, $needle, $tag = 'em', $options = [])
     {
-        $hl = new Highlighter;
+        $hl = new Highlighter($this->tokenizer);
         return $hl->highlight($text, $needle, $tag, $options);
     }
 
     public function snippet($words, $fulltext, $rellength = 300, $prevcount = 50, $indicator = '...')
     {
-        $hl = new Highlighter;
+        $hl = new Highlighter($this->tokenizer);
         return $hl->extractRelevant($words, $fulltext, $rellength, $prevcount, $indicator);
     }
 
